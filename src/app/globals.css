@@ -1,0 +1,97 @@
+@import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme inline {
+  --color-gold: #C5912C;
+  --color-gold-light: #D4A84A;
+  --color-gold-dark: #C17A00;
+  --color-cream: #F7F5E7;
+  --color-cream-dark: #EDE9D5;
+  --color-dark: #242424;
+  --color-dark-light: #333333;
+  --color-charcoal: #333333;
+  --color-text-body: #767676;
+  --color-gray-light: #F5F5F5;
+  --color-border: #E6E6E6;
+  --color-background: #FFFFFF;
+  --color-foreground: #333333;
+
+  /* Aliases */
+  --color-primary: #C5912C;
+  --color-primary-light: #D4A84A;
+  --color-primary-dark: #C17A00;
+  --color-teal: #C5912C;
+  --color-teal-light: #D4A84A;
+  --color-teal-dark: #C17A00;
+  --color-accent: #C5912C;
+
+  --font-heading: "Jost", system-ui, sans-serif;
+  --font-body: "Jost", system-ui, sans-serif;
+}
+
+/* Base */
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-weight: 400;
+  line-height: 1.65;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--color-dark);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-cream);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-gold);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold-dark);
+}
+
+/* Skeleton shimmer animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* RTL support */
+[dir="rtl"] {
+  text-align: right;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Focus styles for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+/* Selection color */
+::selection {
+  background-color: var(--color-gold);
+  color: white;
+}
