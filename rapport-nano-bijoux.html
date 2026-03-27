@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nano Bijoux — Technical Report</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap');
+
+    :root {
+      --primary: #b8860b;
+      --primary-light: #f5e6c8;
+      --dark: #1a1a2e;
+      --text: #333;
+      --text-light: #666;
+      --bg: #ffffff;
+      --bg-alt: #fafafa;
+      --border: #e5e5e5;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --info: #3b82f6;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      color: var(--text);
+      line-height: 1.7;
+      background: var(--bg);
+    }
+
+    @media print {
+      body { font-size: 11pt; }
+      .page-break { page-break-before: always; }
+      .no-print { display: none; }
+      .cover { min-height: 100vh; }
+    }
+
+    /* Cover Page */
+    .cover {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--dark) 0%, #16213e 50%, #0f3460 100%);
+      color: white;
+      text-align: center;
+      padding: 60px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cover::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 30% 50%, rgba(184, 134, 11, 0.1) 0%, transparent 50%),
+                  radial-gradient(circle at 70% 80%, rgba(184, 134, 11, 0.08) 0%, transparent 40%);
+    }
+
+    .cover-content { position: relative; z-index: 1; }
+
+    .cover .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 64px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 8px;
+      letter-spacing: 2px;
+    }
+
+    .cover .tagline {
+      font-size: 18px;
+      font-weight: 300;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 60px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+
+    .cover h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .cover .subtitle {
+      font-size: 16px;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 40px;
+    }
+
+    .cover .meta {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .cover .meta-item {
+      text-align: center;
+    }
+
+    .cover .meta-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 4px;
+    }
+
+    .cover .meta-value {
+      font-size: 14px;
+      color: var(--primary);
+      font-weight: 500;
+    }
+
+    .cover .diamond {
+      width: 40px;
+      height: 40px;
+      border: 2px solid var(--primary);
+      transform: rotate(45deg);
+      margin: 40px auto;
+      opacity: 0.5;
+    }
+
+    /* Content */
+    .content {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 60px 40px;
+    }
+
+    h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      color: var(--dark);
+      margin: 50px 0 24px 0;
+      padding-bottom: 12px;
+      border-bottom: 3px solid var(--primary);
+      display: inline-block;
+    }
+
+    h2::after {
+      content: '';
+      display: block;
+      clear: both;
+    }
+
+    h2 + * { clear: both; }
+
+    h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--dark);
+      margin: 30px 0 14px 0;
+    }
+
+    p { margin-bottom: 14px; color: var(--text); }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+
+    thead th {
+      background: var(--dark);
+      color: white;
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    tbody td {
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody tr:nth-child(even) { background: var(--bg-alt); }
+    tbody tr:hover { background: var(--primary-light); }
+
+    /* Status badges */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-done { background: #dcfce7; color: #166534; }
+    .badge-pending { background: #fef3c7; color: #92400e; }
+    .badge-critical { background: #fecaca; color: #991b1b; }
+    .badge-info { background: #dbeafe; color: #1e40af; }
+
+    /* Checklist */
+    .checklist {
+      list-style: none;
+      padding: 0;
+    }
+
+    .checklist li {
+      padding: 8px 0 8px 32px;
+      position: relative;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 14px;
+    }
+
+    .checklist li::before {
+      position: absolute;
+      left: 0;
+      top: 8px;
+      font-size: 16px;
+    }
+
+    .checklist li.done::before { content: '\2705'; }
+    .checklist li.pending::before { content: '\2B1C'; }
+
+    .checklist li.done { color: var(--text); }
+    .checklist li.pending { color: var(--text-light); }
+
+    /* Code blocks */
+    .code-block {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 20px 24px;
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      overflow-x: auto;
+      margin: 16px 0;
+      white-space: pre;
+    }
+
+    .code-block .comment { color: #6c7086; }
+    .code-block .keyword { color: #cba6f7; }
+    .code-block .string { color: #a6e3a1; }
+
+    /* Alert boxes */
+    .alert {
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-size: 14px;
+      border-left: 4px solid;
+    }
+
+    .alert-danger {
+      background: #fef2f2;
+      border-color: var(--danger);
+      color: #991b1b;
+    }
+
+    .alert-warning {
+      background: #fffbeb;
+      border-color: var(--warning);
+      color: #92400e;
+    }
+
+    .alert-info {
+      background: #eff6ff;
+      border-color: var(--info);
+      color: #1e40af;
+    }
+
+    .alert-success {
+      background: #f0fdf4;
+      border-color: var(--success);
+      color: #166534;
+    }
+
+    .alert strong { display: block; margin-bottom: 4px; }
+
+    /* Progress bar */
+    .progress-container {
+      margin: 24px 0;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .progress-bar {
+      height: 12px;
+      background: #e5e7eb;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 6px;
+      background: linear-gradient(90deg, var(--primary), #d4a017);
+      transition: width 0.3s;
+    }
+
+    /* Stats grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    .stat-card {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-light);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 6px;
+    }
+
+    /* Roadmap */
+    .roadmap {
+      position: relative;
+      padding-left: 30px;
+    }
+
+    .roadmap::before {
+      content: '';
+      position: absolute;
+      left: 8px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+
+    .roadmap-item {
+      position: relative;
+      margin-bottom: 28px;
+      padding-left: 20px;
+    }
+
+    .roadmap-item::before {
+      content: '';
+      position: absolute;
+      left: -26px;
+      top: 6px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 3px solid var(--primary);
+      background: white;
+    }
+
+    .roadmap-item.active::before {
+      background: var(--primary);
+    }
+
+    .roadmap-step {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .roadmap-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--dark);
+      margin: 4px 0;
+    }
+
+    .roadmap-desc {
+      font-size: 13px;
+      color: var(--text-light);
+    }
+
+    /* File tree */
+    .file-tree {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 24px;
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      line-height: 1.8;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .file-tree .folder { color: #89b4fa; }
+    .file-tree .file { color: #a6e3a1; }
+    .file-tree .comment { color: #6c7086; }
+
+    /* Footer */
+    .report-footer {
+      margin-top: 60px;
+      padding-top: 30px;
+      border-top: 2px solid var(--border);
+      text-align: center;
+      color: var(--text-light);
+      font-size: 13px;
+    }
+
+    .report-footer .brand {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    /* Print button */
+    .print-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 50px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(184, 134, 11, 0.4);
+      z-index: 1000;
+      transition: transform 0.2s;
+    }
+
+    .print-btn:hover { transform: scale(1.05); }
+  </style>
+</head>
+<body>
+
+  <!-- Print Button -->
+  <button class="print-btn no-print" onclick="window.print()">Save as PDF</button>
+
+  <!-- COVER PAGE -->
+  <div class="cover">
+    <div class="cover-content">
+      <div class="logo">Nano Bijoux</div>
+      <div class="tagline">Bijoux & Accessoires</div>
+      <div class="diamond"></div>
+      <h1>Comprehensive Technical Report</h1>
+      <p class="subtitle">Full-Stack E-Commerce Platform &mdash; Project Analysis & Roadmap</p>
+      <div class="meta">
+        <div class="meta-item">
+          <div class="meta-label">Date</div>
+          <div class="meta-value">March 22, 2026</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Version</div>
+          <div class="meta-value">0.1.0 (Frontend MVP)</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Framework</div>
+          <div class="meta-value">Next.js 16 + Supabase</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Status</div>
+          <div class="meta-value">Frontend Complete</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- 1. PROJECT OVERVIEW -->
+    <h2>1. Project Overview</h2>
+
+    <p>
+      <strong>Nano Bijoux</strong> is a modern, multilingual e-commerce website built for an Algerian jewelry and accessories boutique
+      (<a href="https://www.instagram.com/nano31bijoux/">@nano31bijoux</a>). The goal is to create a complete online store
+      that allows customers across all 58 Algerian wilayas to browse products, add to cart, and place orders with local
+      payment methods (Cash on Delivery, BaridiMob, CCP).
+    </p>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-number">12</div>
+        <div class="stat-label">Pages Built</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">16</div>
+        <div class="stat-label">Components</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">3</div>
+        <div class="stat-label">Languages</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">58</div>
+        <div class="stat-label">Wilayas Covered</div>
+      </div>
+    </div>
+
+    <div class="progress-container">
+      <div class="progress-header">
+        <span>Overall Progress</span>
+        <span><strong>60%</strong> &mdash; Frontend complete, Backend pending</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: 60%"></div>
+      </div>
+    </div>
+
+    <!-- 2. TECH STACK -->
+    <h2>2. Technology Stack</h2>
+
+    <p>Every technology was chosen with purpose &mdash; balancing modern DX, performance, and suitability for the Algerian market:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Technology</th>
+          <th>Version</th>
+          <th>Role</th>
+          <th>Why Chosen</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Next.js</strong></td>
+          <td>16.2.1</td>
+          <td>Framework</td>
+          <td>SSR + App Router for SEO, fast page loads on slower connections</td>
+        </tr>
+        <tr>
+          <td><strong>React</strong></td>
+          <td>19</td>
+          <td>UI Library</td>
+          <td>Component-based architecture, huge ecosystem</td>
+        </tr>
+        <tr>
+          <td><strong>TypeScript</strong></td>
+          <td>5.x</td>
+          <td>Type Safety</td>
+          <td>Catch errors at build time, better IDE support</td>
+        </tr>
+        <tr>
+          <td><strong>Tailwind CSS</strong></td>
+          <td>4</td>
+          <td>Styling</td>
+          <td>Rapid UI development, built-in RTL support for Arabic</td>
+        </tr>
+        <tr>
+          <td><strong>Supabase</strong></td>
+          <td>Latest</td>
+          <td>Backend</td>
+          <td>Free tier, Auth + DB + Storage in one, PostgreSQL-based</td>
+        </tr>
+        <tr>
+          <td><strong>Zustand</strong></td>
+          <td>Latest</td>
+          <td>State Management</td>
+          <td>Lightweight, localStorage persistence for cart/wishlist</td>
+        </tr>
+        <tr>
+          <td><strong>next-intl</strong></td>
+          <td>Latest</td>
+          <td>i18n</td>
+          <td>Best Next.js i18n library, supports FR/AR/EN with RTL</td>
+        </tr>
+        <tr>
+          <td><strong>Framer Motion</strong></td>
+          <td>Latest</td>
+          <td>Animations</td>
+          <td>Smooth, performant UI animations</td>
+        </tr>
+        <tr>
+          <td><strong>React Hook Form + Zod</strong></td>
+          <td>Latest</td>
+          <td>Forms</td>
+          <td>Performant forms with schema-based validation</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- 3. PROJECT STRUCTURE -->
+    <div class="page-break"></div>
+    <h2>3. Project Structure</h2>
+
+    <div class="file-tree"><span class="folder">src/</span>
+<span class="folder">  app/</span>
+<span class="file">    layout.tsx</span>                  <span class="comment"># Root layout</span>
+<span class="file">    globals.css</span>                 <span class="comment"># Global styles & theme variables</span>
+<span class="folder">    [locale]/</span>                   <span class="comment"># Locale-based routing (fr/ar/en)</span>
+<span class="file">      page.tsx</span>                  <span class="comment"># Home page</span>
+<span class="file">      boutique/page.tsx</span>        <span class="comment"># Shop with filters</span>
+<span class="file">      produit/[slug]/page.tsx</span>  <span class="comment"># Product detail</span>
+<span class="file">      panier/page.tsx</span>          <span class="comment"># Shopping cart</span>
+<span class="file">      commande/page.tsx</span>        <span class="comment"># 4-step checkout</span>
+<span class="file">      connexion/page.tsx</span>       <span class="comment"># Login</span>
+<span class="file">      inscription/page.tsx</span>     <span class="comment"># Register</span>
+<span class="file">      mon-compte/page.tsx</span>      <span class="comment"># Account dashboard</span>
+<span class="file">      a-propos/page.tsx</span>        <span class="comment"># About us</span>
+<span class="file">      contact/page.tsx</span>         <span class="comment"># Contact + FAQ</span>
+<span class="file">      blog/page.tsx</span>            <span class="comment"># Blog listing</span>
+<span class="file">      livraison/page.tsx</span>       <span class="comment"># Shipping info</span>
+<span class="folder">    admin/</span>                      <span class="comment"># Admin panel (folders only)</span>
+<span class="folder">  components/</span>
+<span class="folder">    home/</span>                       <span class="comment"># Hero, categories, featured, newsletter</span>
+<span class="folder">    layout/</span>                     <span class="comment"># Header, footer, mobile menu, announcement</span>
+<span class="folder">    shop/</span>                       <span class="comment"># Product card, filter sidebar</span>
+<span class="folder">    shared/</span>                     <span class="comment"># Language switcher, WhatsApp, scroll-to-top</span>
+<span class="folder">    ui/</span>                         <span class="comment"># Button, Input, Badge, SectionHeading</span>
+<span class="folder">  stores/</span>
+<span class="file">    cart-store.ts</span>               <span class="comment"># Cart with persistence & discount</span>
+<span class="file">    wishlist-store.ts</span>           <span class="comment"># Wishlist with persistence</span>
+<span class="folder">  i18n/</span>                         <span class="comment"># next-intl routing config</span>
+<span class="folder">  lib/</span>
+<span class="file">    constants.ts</span>                <span class="comment"># Site config, categories, brands</span>
+<span class="file">    utils.ts</span>                    <span class="comment"># cn(), formatPrice(), slugify()</span>
+<span class="folder">    supabase/</span>                   <span class="comment"># Client & server Supabase clients</span>
+<span class="folder">  messages/</span>
+<span class="file">    fr.json</span>  <span class="file">ar.json</span>  <span class="file">en.json</span>   <span class="comment"># Translation files</span>
+<span class="folder">  types/</span>
+<span class="file">    index.ts</span>                    <span class="comment"># Full TypeScript type definitions</span></div>
+
+    <!-- 4. COMPLETED FEATURES -->
+    <h2>4. Completed Features (Frontend)</h2>
+
+    <ul class="checklist">
+      <li class="done"><strong>Responsive Mobile-First Design</strong> &mdash; Works on all screen sizes</li>
+      <li class="done"><strong>Multilingual Support</strong> &mdash; French, Arabic (with RTL layout), English</li>
+      <li class="done"><strong>Home Page</strong> &mdash; Hero slider, category grid, featured products, brand promises, Instagram feed, newsletter</li>
+      <li class="done"><strong>Shop Page</strong> &mdash; Product grid with category, brand, price range, and material filters</li>
+      <li class="done"><strong>Product Detail</strong> &mdash; Image gallery, variant selection, reviews tab, related products</li>
+      <li class="done"><strong>Shopping Cart</strong> &mdash; Add/remove items, quantity controls, automatic 10% discount at 3+ items</li>
+      <li class="done"><strong>Wishlist</strong> &mdash; Toggle favorites with localStorage persistence</li>
+      <li class="done"><strong>4-Step Checkout</strong> &mdash; Personal info, shipping (58 wilayas), payment method, confirmation</li>
+      <li class="done"><strong>Authentication UI</strong> &mdash; Login and registration forms with validation</li>
+      <li class="done"><strong>Account Dashboard</strong> &mdash; Profile, orders, addresses, favorites, settings sections</li>
+      <li class="done"><strong>Contact Page</strong> &mdash; Contact form with FAQ accordion</li>
+      <li class="done"><strong>Static Pages</strong> &mdash; About us, shipping info, blog listing</li>
+      <li class="done"><strong>WhatsApp Button</strong> &mdash; Floating button linked to +213 549 63 12 36</li>
+      <li class="done"><strong>Announcement Bar</strong> &mdash; Dismissible top banner</li>
+      <li class="done"><strong>Animations</strong> &mdash; Smooth transitions with Framer Motion</li>
+      <li class="done"><strong>UI Component Kit</strong> &mdash; Reusable Button, Input, Badge, SectionHeading</li>
+    </ul>
+
+    <!-- 5. PENDING FEATURES -->
+    <div class="page-break"></div>
+    <h2>5. Pending Features (Backend)</h2>
+
+    <div class="alert alert-warning">
+      <strong>Current Status: Frontend Only</strong>
+      The website currently uses hardcoded/mock data. No real database, authentication, or payment processing is connected yet.
+      All product data, user accounts, and orders exist only in the UI.
+    </div>
+
+    <ul class="checklist">
+      <li class="pending"><strong>Supabase Database Setup</strong> &mdash; Create tables for products, orders, users, categories, reviews</li>
+      <li class="pending"><strong>Authentication</strong> &mdash; Supabase Auth for login/register, protected routes, session management</li>
+      <li class="pending"><strong>Real Product Data</strong> &mdash; Replace mock data with database queries</li>
+      <li class="pending"><strong>Order Processing</strong> &mdash; Store orders in database, order status tracking</li>
+      <li class="pending"><strong>Payment Integration</strong> &mdash; BaridiMob, CCP, Cash on Delivery confirmation</li>
+      <li class="pending"><strong>Email Notifications</strong> &mdash; Order confirmation, shipping updates</li>
+      <li class="pending"><strong>Search</strong> &mdash; Full-text product search</li>
+      <li class="pending"><strong>Admin Panel</strong> &mdash; CRUD for products, orders, customers, blog, coupons</li>
+      <li class="pending"><strong>Image Upload</strong> &mdash; Supabase Storage for product images</li>
+      <li class="pending"><strong>SEO</strong> &mdash; Meta tags, Open Graph, sitemap.xml, structured data</li>
+    </ul>
+
+    <!-- 6. BACKEND STATUS -->
+    <h2>6. Backend & Database Status</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Component</th>
+          <th>Status</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Supabase Client Setup</td>
+          <td><span class="badge badge-done">Stub Ready</span></td>
+          <td>Client & server files exist in <code>src/lib/supabase/</code>, ready to connect</td>
+        </tr>
+        <tr>
+          <td>Database Tables</td>
+          <td><span class="badge badge-pending">Not Created</span></td>
+          <td>No tables exist yet in Supabase</td>
+        </tr>
+        <tr>
+          <td>Authentication</td>
+          <td><span class="badge badge-pending">Not Connected</span></td>
+          <td>UI forms exist, but no Supabase Auth integration</td>
+        </tr>
+        <tr>
+          <td>Product Data</td>
+          <td><span class="badge badge-pending">Mock Only</span></td>
+          <td>Hardcoded sample data in components</td>
+        </tr>
+        <tr>
+          <td>Cart & Wishlist</td>
+          <td><span class="badge badge-done">Client-Side</span></td>
+          <td>Zustand stores with localStorage &mdash; works but not synced to server</td>
+        </tr>
+        <tr>
+          <td>Order Processing</td>
+          <td><span class="badge badge-pending">UI Only</span></td>
+          <td>Checkout form exists but orders are not stored</td>
+        </tr>
+        <tr>
+          <td>API Routes</td>
+          <td><span class="badge badge-pending">Not Created</span></td>
+          <td>No server-side API routes exist</td>
+        </tr>
+        <tr>
+          <td>Admin Panel</td>
+          <td><span class="badge badge-pending">Folders Only</span></td>
+          <td>Directory structure exists, no page files</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- 7. SECURITY AUDIT -->
+    <div class="page-break"></div>
+    <h2>7. Security Audit</h2>
+
+    <h3>Safe to Share</h3>
+    <div class="alert alert-success">
+      <strong>All source code is clean</strong>
+      No hardcoded API keys, passwords, or secrets were found in the <code>src/</code> directory.
+      The codebase is safe to push to GitHub or share with developers.
+    </div>
+
+    <h3>Sensitive Files &mdash; NEVER Share</h3>
+
+    <div class="alert alert-danger">
+      <strong>CRITICAL: These files contain private keys and tokens</strong>
+      Never commit these to Git, share on GitHub, or send to anyone.
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>File</th>
+          <th>Location</th>
+          <th>Contains</th>
+          <th>Risk Level</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>.env.local</strong></td>
+          <td>nano-bijoux/</td>
+          <td>Supabase URL & anon key</td>
+          <td><span class="badge badge-critical">HIGH</span></td>
+        </tr>
+        <tr>
+          <td><strong>.mcp.json</strong></td>
+          <td>Parent directory (antig/)</td>
+          <td>Supabase MCP access token</td>
+          <td><span class="badge badge-critical">HIGH</span></td>
+        </tr>
+        <tr>
+          <td><strong>.credentials.json</strong></td>
+          <td>~/.claude/</td>
+          <td>Claude AI OAuth tokens</td>
+          <td><span class="badge badge-critical">HIGH</span></td>
+        </tr>
+        <tr>
+          <td><strong>settings.json</strong></td>
+          <td>~/.claude/</td>
+          <td>Service role keys, project IDs</td>
+          <td><span class="badge badge-critical">HIGH</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>How to Share Safely on GitHub</h3>
+    <div class="code-block"><span class="comment"># 1. Make sure .gitignore includes these entries:</span>
+.env.local
+.env*.local
+.mcp.json
+
+<span class="comment"># 2. Initialize git and push</span>
+<span class="keyword">git</span> init
+<span class="keyword">git</span> add .
+<span class="keyword">git</span> commit -m <span class="string">"Initial commit - Nano Bijoux frontend"</span>
+<span class="keyword">git</span> remote add origin https://github.com/YOUR_USERNAME/nano-bijoux.git
+<span class="keyword">git</span> push -u origin main
+
+<span class="comment"># 3. Create .env.local.example for other developers:</span>
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here</div>
+
+    <!-- 8. DEPLOYMENT ROADMAP -->
+    <h2>8. Deployment Roadmap</h2>
+
+    <div class="roadmap">
+      <div class="roadmap-item active">
+        <div class="roadmap-step">Phase 1 &mdash; Completed</div>
+        <div class="roadmap-title">Frontend MVP</div>
+        <div class="roadmap-desc">All pages, components, translations, cart/wishlist, responsive design</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-step">Phase 2 &mdash; Next Priority</div>
+        <div class="roadmap-title">Backend Foundation</div>
+        <div class="roadmap-desc">Supabase tables (products, categories, orders, users), seed data, API routes</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-step">Phase 3</div>
+        <div class="roadmap-title">Authentication</div>
+        <div class="roadmap-desc">Supabase Auth, protected routes, session management, user profiles</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-step">Phase 4</div>
+        <div class="roadmap-title">Core E-Commerce</div>
+        <div class="roadmap-desc">Real products from DB, order processing, payment methods, email notifications</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-step">Phase 5</div>
+        <div class="roadmap-title">Admin Panel</div>
+        <div class="roadmap-desc">Dashboard with CRUD for products, orders, customers, blog, coupons</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-step">Phase 6</div>
+        <div class="roadmap-title">Production Launch</div>
+        <div class="roadmap-desc">Deploy to Vercel, connect nanobijoux.dz domain, analytics, SEO, performance optimization</div>
+      </div>
+    </div>
+
+    <!-- 9. PRIORITIZED TODO -->
+    <h2>9. Prioritized TODO List</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Task</th>
+          <th>Priority</th>
+          <th>Effort</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>Create Supabase database tables (products, categories, orders, users, reviews)</td>
+          <td><span class="badge badge-critical">Critical</span></td>
+          <td>1-2 days</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Seed database with real product data and images</td>
+          <td><span class="badge badge-critical">Critical</span></td>
+          <td>1 day</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>Connect frontend pages to Supabase queries (replace mock data)</td>
+          <td><span class="badge badge-critical">Critical</span></td>
+          <td>2-3 days</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>Implement Supabase Auth (login, register, sessions, protected routes)</td>
+          <td><span class="badge badge-critical">Critical</span></td>
+          <td>1-2 days</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>Build order processing &mdash; store orders, update status, send confirmation</td>
+          <td><span class="badge badge-critical">Critical</span></td>
+          <td>2 days</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>Payment method integration (COD confirmation, BaridiMob, CCP)</td>
+          <td><span class="badge badge-pending">High</span></td>
+          <td>2-3 days</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>Build admin panel (product/order/customer management)</td>
+          <td><span class="badge badge-pending">High</span></td>
+          <td>3-5 days</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>Image upload to Supabase Storage</td>
+          <td><span class="badge badge-pending">High</span></td>
+          <td>1 day</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td>Product search functionality</td>
+          <td><span class="badge badge-info">Medium</span></td>
+          <td>1 day</td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td>Email notifications (order confirmation, shipping updates)</td>
+          <td><span class="badge badge-info">Medium</span></td>
+          <td>1-2 days</td>
+        </tr>
+        <tr>
+          <td>11</td>
+          <td>SEO optimization (meta tags, sitemap, structured data)</td>
+          <td><span class="badge badge-info">Medium</span></td>
+          <td>1 day</td>
+        </tr>
+        <tr>
+          <td>12</td>
+          <td>Deploy to Vercel + connect domain</td>
+          <td><span class="badge badge-info">Medium</span></td>
+          <td>1 day</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- 10. BUSINESS INFO -->
+    <h2>10. Business Information</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Detail</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Brand Name</td><td><strong>Nano Bijoux</strong></td></tr>
+        <tr><td>Currency</td><td>Algerian Dinar (DA / DZD)</td></tr>
+        <tr><td>WhatsApp</td><td>+213 549 63 12 36</td></tr>
+        <tr><td>Email</td><td>contact@nanobijoux.dz</td></tr>
+        <tr><td>Instagram</td><td>@nano31bijoux</td></tr>
+        <tr><td>Delivery Coverage</td><td>All 58 Algerian wilayas</td></tr>
+        <tr><td>Payment Methods</td><td>Cash on Delivery, BaridiMob, CCP</td></tr>
+        <tr><td>Default Language</td><td>French (with Arabic RTL & English)</td></tr>
+      </tbody>
+    </table>
+
+    <!-- FOOTER -->
+    <div class="report-footer">
+      <div class="brand">Nano Bijoux</div>
+      <p>Technical Report &mdash; Generated March 22, 2026</p>
+      <p>Built with Next.js 16, React 19, TypeScript, Tailwind CSS, Supabase</p>
+    </div>
+
+  </div>
+
+</body>
+</html>
