@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useCartStore } from '@/stores/cart-store';
 import { formatPrice } from '@/lib/constants';
 import { getLocalizedField } from '@/lib/utils';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Tag } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState } from 'react';
 
@@ -17,7 +17,7 @@ export default function CartPage() {
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const { items, updateQuantity, removeItem, getSubtotal, getDiscount, getTotal, getItemCount } = useCartStore();
-  const [couponCode, setCouponCode] = useState('');
+  // couponCode state removed — coupons are applied at checkout, not here.
 
   const subtotal = getSubtotal();
   const discount = getDiscount();
@@ -154,20 +154,14 @@ export default function CartPage() {
                 {t('orderSummary')}
               </h2>
 
-              {/* Coupon */}
-              <div className="flex gap-2 mb-6">
-                <div className="relative flex-1">
-                  <Tag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 rtl:left-auto rtl:right-3" />
-                  <input
-                    type="text"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value)}
-                    placeholder={t('couponCode')}
-                    className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:border-gold focus:outline-none rtl:pl-3 rtl:pr-10"
-                  />
-                </div>
-                <Button variant="outline" size="sm">{tCommon('apply')}</Button>
-              </div>
+              {/*
+                Coupon input intentionally removed from the cart page:
+                 - The Apply button had no handler (dead UI).
+                 - Coupons validate + apply on the checkout page itself
+                   (see src/app/[locale]/commande/page.tsx — applyCoupon).
+                 - Keeping a decorative coupon field here mis-led customers
+                   into typing then re-typing the code at checkout.
+              */}
 
               {/* Totals */}
               <div className="space-y-3 text-sm">

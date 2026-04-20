@@ -1,10 +1,14 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import { Link, useRouter } from '@/i18n/navigation';
 import { useAuthStore } from '@/stores/auth-store';
+import { useWishlistStore } from '@/stores/wishlist-store';
+import { useHydrated } from '@/hooks/use-hydrated';
+import { useRealtimeTable } from '@/hooks/use-realtime-table';
+import { createClient } from '@/lib/supabase/client';
 import { ShoppingBag, MapPin, Heart, Settings, ChevronRight, Package, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -21,11 +25,60 @@ export default function AccountPage() {
   const router = useRouter();
   const { user, profile, initialized, logout } = useAuthStore();
 
+  // Live counters — previously hardcoded to '0' which is why the UI
+  // never reflected real activity. Now:
+  //   - Orders  → `orders` rows matching user_id
+  //   - Favoris → wishlist store (localStorage-backed Zustand)
+  //   - Adresses → `addresses` rows matching user_id
+  const hydrated = useHydrated();
+  const wishlistCount = useWishlistStore((s) => s.items.length);
+  const [orderCount, setOrderCount] = useState(0);
+  const [addressCount, setAddressCount] = useState(0);
+
   useEffect(() => {
     if (initialized && !user) {
       router.push('/connexion');
     }
   }, [initialized, user, router]);
+
+  // Fetch counts. Extracted so both the initial mount AND realtime
+  // events below can trigger a refresh.
+  const refreshCounts = async () => {
+    if (!user) return;
+    const supabase = createClient();
+    const [{ count: orders }, { count: addresses }] = await Promise.all([
+      supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id),
+      supabase
+        .from('addresses')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id),
+    ]);
+    setOrderCount(orders ?? 0);
+    setAddressCount(addresses ?? 0);
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    refreshCounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Realtime: any INSERT/DELETE on orders OR addresses → recount.
+  // Enabled only once the user is resolved so we don't subscribe
+  // before we know whose rows to watch.
+  useRealtimeTable({
+    table: 'orders',
+    onChange: () => refreshCounts(),
+    enabled: !!user,
+  });
+  useRealtimeTable({
+    table: 'addresses',
+    onChange: () => refreshCounts(),
+    enabled: !!user,
+  });
 
   const handleLogout = async () => {
     await logout();
@@ -71,12 +124,27 @@ export default function AccountPage() {
           </div>
         </div>
 
-        {/* Quick stats */}
+        {/* TEMPORARY DEBUG CHIP — remove once Commandes count is verified.
+            Prints the logged-in auth user.id so we can compare it to
+            orders.user_id in the DB. If they don't match, /mon-compte is
+            querying the wrong id. If they match but count is 0, the
+            query is bugged OR no orders have that user_id. */}
+        {process.env.NODE_ENV !== 'production' && user && (
+          <div className="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 p-3 text-xs font-mono break-all">
+            <span className="font-bold text-yellow-800">debug user.id:</span>{' '}
+            <span className="text-yellow-700">{user.id}</span>
+            <span className="ml-3 font-bold text-yellow-800">orders.count:</span>{' '}
+            <span className="text-yellow-700">{orderCount}</span>
+          </div>
+        )}
+
+        {/* Quick stats — now live. wishlistCount gated by `hydrated`
+            so SSR and client render the same value (no hydration warning). */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           {[
-            { label: 'Commandes', value: '0', icon: Package },
-            { label: 'Favoris', value: '0', icon: Heart },
-            { label: 'Adresses', value: '0', icon: MapPin },
+            { label: 'Commandes', value: String(orderCount), icon: Package },
+            { label: 'Favoris',   value: hydrated ? String(wishlistCount) : '0', icon: Heart },
+            { label: 'Adresses',  value: String(addressCount), icon: MapPin },
           ].map(({ label, value, icon: Icon }, i) => (
             <motion.div
               key={label}

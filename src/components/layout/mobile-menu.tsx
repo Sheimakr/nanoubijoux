@@ -12,10 +12,10 @@ interface MobileMenuProps {
 }
 
 const navLinks = [
+  // /contact route + nav entry removed per owner request.
   { href: '/', key: 'home' },
   { href: '/boutique', key: 'shop' },
   { href: '/a-propos', key: 'about' },
-  { href: '/contact', key: 'contact' },
   { href: '/blog', key: 'blog' },
   { href: '/livraison', key: 'shipping' },
 ] as const;

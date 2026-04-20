@@ -1,12 +1,20 @@
 'use client';
 
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { MessageCircle } from 'lucide-react';
-import { WHATSAPP_NUMBER } from '@/lib/constants';
+import { useSettingsStore } from '@/stores/settings-store';
 
 export function WhatsAppButton() {
+  const { phone, fetchSettings, loaded } = useSettingsStore();
+
+  useEffect(() => {
+    if (!loaded) fetchSettings();
+  }, [loaded, fetchSettings]);
+
+  const cleanPhone = phone.replace(/[^0-9+]/g, '').replace(/^\+/, '');
   const message = encodeURIComponent('Bonjour! Je suis intéressé(e) par vos produits.');
-  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER.replace(/[^0-9]/g, '')}?text=${message}`;
+  const whatsappUrl = `https://wa.me/${cleanPhone}?text=${message}`;
 
   return (
     <motion.a
@@ -22,7 +30,6 @@ export function WhatsAppButton() {
       aria-label="Chat on WhatsApp"
     >
       <MessageCircle size={26} fill="currentColor" />
-      {/* Pulse ring */}
       <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-25" />
     </motion.a>
   );

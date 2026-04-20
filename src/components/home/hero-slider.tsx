@@ -1,15 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useSettingsStore } from '@/stores/settings-store';
 
-const slides = [
+// Fallback slides used when the admin hasn't uploaded any hero images yet.
+// They reference /public/images/hero-*.jpg which existed historically.
+// Title / subtitle / CTA come from the i18n `home.*` namespace so they
+// localize automatically across fr/ar/en.
+const FALLBACK_SLIDES = [
   {
-    id: 1,
     image: '/images/hero-1.jpg',
     titleKey: 'heroTitle',
     subtitleKey: 'heroSubtitle',
@@ -17,7 +21,6 @@ const slides = [
     ctaLink: '/boutique',
   },
   {
-    id: 2,
     image: '/images/hero-2.jpg',
     titleKey: 'heroTitle2',
     subtitleKey: 'heroSubtitle2',
@@ -30,18 +33,56 @@ export function HeroSlider() {
   const t = useTranslations('home');
   const [current, setCurrent] = useState(0);
 
-  const nextSlide = useCallback(() => {
-    setCurrent((prev) => (prev + 1) % slides.length);
-  }, []);
-
-  const prevSlide = useCallback(() => {
-    setCurrent((prev) => (prev - 1 + slides.length) % slides.length);
-  }, []);
+  // Pull the admin-managed hero images from the settings store (live via
+  // Supabase Realtime — updates here without a page refresh).
+  const { hero_images, fetchSettings, loaded } = useSettingsStore();
 
   useEffect(() => {
+    if (!loaded) fetchSettings();
+  }, [loaded, fetchSettings]);
+
+  /**
+   * Build the slide list. If the admin has uploaded at least one image,
+   * use those exclusively (and cycle through built-in i18n text on each
+   * slide). Otherwise fall back to the two hardcoded slides so first-run
+   * installs don't show a blank hero.
+   */
+  const slides = useMemo(() => {
+    if (hero_images && hero_images.length > 0) {
+      return hero_images.map((url, idx) => ({
+        image: url,
+        // Alternate between the two i18n key pairs so a long slideshow
+        // doesn't keep repeating the same text.
+        titleKey:    idx % 2 === 0 ? 'heroTitle'    : 'heroTitle2',
+        subtitleKey: idx % 2 === 0 ? 'heroSubtitle' : 'heroSubtitle2',
+        ctaKey:      idx % 2 === 0 ? 'heroCta'      : 'heroCta2',
+        ctaLink: '/boutique',
+      }));
+    }
+    return FALLBACK_SLIDES;
+  }, [hero_images]);
+
+  const slideCount = slides.length;
+
+  const nextSlide = useCallback(() => {
+    setCurrent((prev) => (prev + 1) % slideCount);
+  }, [slideCount]);
+
+  const prevSlide = useCallback(() => {
+    setCurrent((prev) => (prev - 1 + slideCount) % slideCount);
+  }, [slideCount]);
+
+  // Reset index if the slide list shrinks (e.g. admin deletes images).
+  useEffect(() => {
+    if (current >= slideCount) setCurrent(0);
+  }, [current, slideCount]);
+
+  useEffect(() => {
+    // Don't auto-advance if there's only one slide.
+    if (slideCount <= 1) return;
     const interval = setInterval(nextSlide, 5000);
     return () => clearInterval(interval);
-  }, [nextSlide]);
+  }, [nextSlide, slideCount]);
 
   return (
     <section className="relative min-h-[420px] sm:min-h-[500px] lg:min-h-[700px] overflow-hidden bg-cream">

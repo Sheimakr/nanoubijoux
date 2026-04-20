@@ -4,18 +4,19 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Upload, X } from 'lucide-react';
 import Link from 'next/link';
-import { getCategories, getBrands } from '@/lib/supabase/queries';
+import { getCategories, getBrands, getMaterials } from '@/lib/supabase/queries';
 import { getAdminProductById, updateProduct, addProductImage, deleteProductImage, uploadProductImage } from '@/lib/supabase/admin-queries';
 import { Button } from '@/components/ui/button';
 import { slugify } from '@/lib/utils';
 import { toast } from 'sonner';
-import type { Category, Brand } from '@/types';
+import type { Category, Brand, Material } from '@/types';
 
 export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -29,7 +30,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     compare_at_price: '',
     category_id: '',
     brand_id: '',
-    material: '',
+    material_id: '',
     stock_quantity: '0',
     sku: '',
     is_featured: false,
@@ -42,10 +43,12 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     Promise.all([
       getCategories(),
       getBrands(),
+      getMaterials(),
       getAdminProductById(id),
-    ]).then(([cats, brnds, product]) => {
+    ]).then(([cats, brnds, mats, product]) => {
       setCategories(cats);
       setBrands(brnds);
+      setMaterials(mats);
 
       const primaryImage = product.images?.find((img: { is_primary: boolean }) => img.is_primary) || product.images?.[0];
       if (primaryImage) {
@@ -61,7 +64,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         compare_at_price: product.compare_at_price ? String(product.compare_at_price) : '',
         category_id: product.category_id ? String(product.category_id) : '',
         brand_id: product.brand_id ? String(product.brand_id) : '',
-        material: product.material || '',
+        material_id: product.material_id ? String(product.material_id) : '',
         stock_quantity: String(product.stock_quantity ?? 0),
         sku: product.sku || '',
         is_featured: product.is_featured || false,
@@ -106,7 +109,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         compare_at_price: form.compare_at_price ? Number(form.compare_at_price) : null,
         category_id: form.category_id ? Number(form.category_id) : null,
         brand_id: form.brand_id ? Number(form.brand_id) : null,
-        material: form.material || null,
+        material_id: form.material_id ? Number(form.material_id) : null,
         stock_quantity: Number(form.stock_quantity),
         sku: form.sku || null,
         is_featured: form.is_featured,
@@ -214,15 +217,24 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               </select>
             </div>
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">Matériau</label>
-              <select value={form.material} onChange={(e) => setForm({ ...form, material: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
-                <option value="">— Aucun —</option>
-                <option value="Acier inoxydable">Acier inoxydable</option>
-                <option value="Plaqué or">Plaqué or</option>
-                <option value="Argent 925">Argent 925</option>
-                <option value="Cuivre">Cuivre</option>
-                <option value="Perles">Perles</option>
+              <label className="text-xs text-gray-500 mb-1 block">Matière</label>
+              <select
+                value={form.material_id}
+                onChange={(e) => setForm({ ...form, material_id: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg text-sm"
+              >
+                <option value="">— Aucune —</option>
+                {materials.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
               </select>
+              {materials.length === 0 && (
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Aucune matière — ajoutez-en via l&apos;onglet Matières.
+                </p>
+              )}
             </div>
           </div>
         </div>

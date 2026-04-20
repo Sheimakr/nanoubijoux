@@ -75,3 +75,21 @@ export async function getWilayasServer() {
   if (error) return [];
   return data;
 }
+
+/**
+ * Server-side blog post fetch by slug. Used by the /blog/[slug] route
+ * segment for generateMetadata — the client view still fetches on its
+ * own for hydration. Returns null if missing / unpublished.
+ */
+export async function getBlogPostBySlugServer(slug: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select('*')
+    .eq('slug', slug)
+    .not('published_at', 'is', null)
+    .maybeSingle();
+
+  if (error) return null;
+  return data;
+}

@@ -17,7 +17,7 @@ const emptyFilters: Filters = {
   brandId: null,
   priceMin: null,
   priceMax: null,
-  material: null,
+  materialId: null,
 };
 
 export default function BoutiquePage() {
@@ -43,7 +43,7 @@ export default function BoutiquePage() {
           brandId: filters.brandId || undefined,
           priceMin: filters.priceMin || undefined,
           priceMax: filters.priceMax || undefined,
-          material: filters.material || undefined,
+          materialId: filters.materialId || undefined,
         });
         setProducts(data);
       } catch (err) {
@@ -58,7 +58,7 @@ export default function BoutiquePage() {
     filters.categoryId,
     filters.brandId,
     filters.priceMin || filters.priceMax,
-    filters.material,
+    filters.materialId,
   ].filter(Boolean).length;
 
   return (
@@ -169,10 +169,10 @@ export default function BoutiquePage() {
                     <button onClick={() => setFilters({ ...filters, priceMin: null, priceMax: null })}><X size={12} /></button>
                   </span>
                 )}
-                {filters.material && (
+                {filters.materialId && (
                   <span className="inline-flex items-center gap-1 bg-gold/10 text-gold text-xs px-3 py-1.5 font-medium">
-                    {filters.material}
-                    <button onClick={() => setFilters({ ...filters, material: null })}><X size={12} /></button>
+                    Matière
+                    <button onClick={() => setFilters({ ...filters, materialId: null })}><X size={12} /></button>
                   </span>
                 )}
                 <button

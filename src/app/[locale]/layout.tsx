@@ -1,5 +1,5 @@
 import { NextIntlClientProvider, hasLocale } from 'next-intl';
-import { getMessages } from 'next-intl/server';
+import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import { AnnouncementBar } from '@/components/layout/announcement-bar';
@@ -26,6 +26,13 @@ export default async function LocaleLayout({
   if (!hasLocale(routing.locales, locale)) {
     notFound();
   }
+
+  // Required for next-intl v4 + Next 16 static rendering. Establishes
+  // the locale context for this request so that server components AND
+  // nested client components can resolve `useTranslations(...)` calls.
+  // Without this, any call like `useTranslations('home')` throws
+  // during static render / initial SSR.
+  setRequestLocale(locale);
 
   const messages = await getMessages();
   const isRtl = locale === 'ar';

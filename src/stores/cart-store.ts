@@ -79,6 +79,9 @@ export const useCartStore = create<CartStore>()(
       },
 
       getDiscount: () => {
+        // Auto-discount: 10% off when the cart has 3 or more units
+        // (any mix of products counts). Stacks with coupon discounts,
+        // which are tracked separately in the checkout page state.
         const items = get().items;
         const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
         if (totalItems >= 3) {

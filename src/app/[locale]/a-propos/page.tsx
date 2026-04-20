@@ -10,27 +10,9 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero */}
-      <div className="relative bg-dark py-20 sm:py-28 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-gold/10 to-teal/10" />
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6"
-          >
-            {t('title')}
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="text-lg text-gray-400 max-w-2xl mx-auto"
-          >
-            Chaque femme mérite de se sentir unique, élégante et pleine de confiance.
-          </motion.p>
-        </div>
-      </div>
+      {/* Hero block (dark gradient banner with "About Nano Bijoux" title)
+          removed per owner request. The page now starts directly with
+          the Story section below. */}
 
       {/* Story */}
       <section className="py-16 sm:py-20">

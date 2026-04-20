@@ -13,6 +13,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useCartStore } from '@/stores/cart-store';
+import { useSettingsStore } from '@/stores/settings-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { useHydrated } from '@/hooks/use-hydrated';
 import { cn, getLocalizedField } from '@/lib/utils';
@@ -24,10 +25,10 @@ import Image from 'next/image';
 import type { Product } from '@/types';
 
 const navLinks = [
+  // /contact route + nav entry removed per owner request.
   { href: '/', key: 'home' },
   { href: '/boutique', key: 'shop' },
   { href: '/a-propos', key: 'about' },
-  { href: '/contact', key: 'contact' },
   { href: '/blog', key: 'blog' },
 ] as const;
 
@@ -36,6 +37,7 @@ export function Header() {
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const router = useRouter();
+  const { store_name, fetchSettings, loaded: settingsLoaded } = useSettingsStore();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -78,6 +80,10 @@ export function Header() {
   };
 
   useEffect(() => {
+    if (!settingsLoaded) fetchSettings();
+  }, [settingsLoaded, fetchSettings]);
+
+  useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
@@ -107,7 +113,7 @@ export function Header() {
             {/* Logo */}
             <Link href="/" className="flex-shrink-0">
               <span className="font-heading text-2xl font-bold text-dark tracking-tight">
-                Nano Bijoux
+                {store_name}
               </span>
             </Link>
 

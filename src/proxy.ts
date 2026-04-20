@@ -8,11 +8,15 @@ const intlMiddleware = createIntlMiddleware(routing);
 
 const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: string }> = [
   { prefix: '/admin/settings', permission: 'settings:manage' },
-  { prefix: '/admin/users', permission: 'users:manage' },
+  // UI route was renamed from /admin/users → /admin/admins in phase 4b.
+  // The API path (/api/admin/users, below) is kept for backward compatibility.
+  { prefix: '/admin/admins', permission: 'users:manage' },
   { prefix: '/admin/pixels', permission: 'pixels:manage' },
   { prefix: '/admin/delivery', permission: 'delivery:manage' },
   { prefix: '/admin/produits', permission: 'products:manage' },
   { prefix: '/admin/categories', permission: 'categories:manage' },
+  // Super-admins only — agents typing /admin/coupons directly get redirected.
+  { prefix: '/admin/coupons', permission: 'coupons:manage' },
   { prefix: '/api/admin/users', permission: 'users:manage' },
   { prefix: '/api/admin/settings', permission: 'settings:manage' },
   { prefix: '/api/admin/pixels', permission: 'pixels:manage' },

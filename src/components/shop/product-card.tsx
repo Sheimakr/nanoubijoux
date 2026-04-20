@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Link, useRouter } from '@/i18n/navigation';
 import { Heart, ShoppingBag, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +11,7 @@ import { useCartStore } from '@/stores/cart-store';
 import { useWishlistStore } from '@/stores/wishlist-store';
 import { useHydrated } from '@/hooks/use-hydrated';
 import { formatPrice } from '@/lib/constants';
-import { cn } from '@/lib/utils';
+import { cn, getLocalizedField } from '@/lib/utils';
 import type { Product } from '@/types';
 import { toast } from 'sonner';
 
@@ -23,13 +23,16 @@ interface ProductCardProps {
 export function ProductCard({ product, index = 0 }: ProductCardProps) {
   const t = useTranslations('shop');
   const tCommon = useTranslations('common');
+  // Pull the current locale so DB-backed names localize automatically.
+  // getLocalizedField falls back to *_fr if the active locale field is blank.
+  const locale = useLocale();
   const router = useRouter();
   const hydrated = useHydrated();
   const addToCart = useCartStore((s) => s.addItem);
   const toggleWishlist = useWishlistStore((s) => s.toggleItem);
   const isInWishlist = useWishlistStore((s) => s.isInWishlist(product.id));
 
-  const name = product.name_fr || 'Produit';
+  const name = getLocalizedField(product, 'name', locale) || 'Produit';
   const primaryImage = product.images?.[0]?.url || '/images/placeholder.jpg';
   const outOfStock = product.stock_quantity === 0;
 
@@ -86,7 +89,9 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
                 </Badge>
               )}
               {outOfStock && (
-                <Badge variant="outOfStock" className="text-xs">Épuisé</Badge>
+                <Badge variant="outOfStock" className="text-xs">
+                  {tCommon('outOfStock')}
+                </Badge>
               )}
             </div>
 
@@ -114,10 +119,10 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
             </h3>
           </Link>
 
-          {/* Category */}
+          {/* Category — localized like the product name */}
           {product.category && (
             <p className="text-xs text-gray-400 mb-2">
-              {product.category.name_fr}
+              {getLocalizedField(product.category, 'name', locale)}
             </p>
           )}
 
@@ -133,7 +138,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
             )}
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons — labels live under common.* in the message files */}
           <div className="flex gap-2">
             <button
               onClick={handleAddToCart}
@@ -141,7 +146,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-gold text-gold text-xs font-medium rounded-lg hover:bg-gold hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ShoppingBag size={14} />
-              Ajouter
+              {tCommon('addToCart')}
             </button>
             <button
               onClick={handleBuyNow}
@@ -149,7 +154,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-gold text-white text-xs font-medium rounded-lg hover:bg-gold/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Zap size={14} />
-              Acheter
+              {tCommon('buyNow')}
             </button>
           </div>
         </div>

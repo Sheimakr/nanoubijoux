@@ -6,15 +6,16 @@ import { useTranslations, useLocale } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, X, SlidersHorizontal } from 'lucide-react';
 import { cn, getLocalizedField } from '@/lib/utils';
-import { getCategories, getBrands } from '@/lib/supabase/queries';
-import type { Category, Brand } from '@/types';
+import { getCategories, getBrands, getMaterials } from '@/lib/supabase/queries';
+import type { Category, Brand, Material } from '@/types';
 
 export interface Filters {
   categoryId: number | null;
   brandId: number | null;
   priceMin: number | null;
   priceMax: number | null;
-  material: string | null;
+  // Previously a free-text string. Now a FK into the `materials` table.
+  materialId: number | null;
 }
 
 interface FilterSidebarProps {
@@ -61,12 +62,14 @@ export function FilterSidebar({ isOpen, onClose, filters, onFiltersChange }: Fil
   const locale = useLocale();
   const [categories, setCategories] = useState<(Category & { product_count?: number })[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
   const [priceMin, setPriceMin] = useState(filters.priceMin?.toString() || '');
   const [priceMax, setPriceMax] = useState(filters.priceMax?.toString() || '');
 
   useEffect(() => {
     getCategories().then(setCategories).catch(console.error);
     getBrands().then(setBrands).catch(console.error);
+    getMaterials().then(setMaterials).catch(console.error);
   }, []);
 
   const updateFilter = (update: Partial<Filters>) => {
@@ -88,13 +91,16 @@ export function FilterSidebar({ isOpen, onClose, filters, onFiltersChange }: Fil
       brandId: null,
       priceMin: null,
       priceMax: null,
-      material: null,
+      materialId: null,
     });
   };
 
-  const hasActiveFilters = filters.categoryId || filters.brandId || filters.priceMin || filters.priceMax || filters.material;
-
-  const materials = ['Acier inoxydable', 'Plaqué or'];
+  const hasActiveFilters =
+    filters.categoryId ||
+    filters.brandId ||
+    filters.priceMin ||
+    filters.priceMax ||
+    filters.materialId;
 
   const content = (
     <div className="p-5">
@@ -179,24 +185,33 @@ export function FilterSidebar({ isOpen, onClose, filters, onFiltersChange }: Fil
         </div>
       </FilterSection>
 
-      {/* Material */}
+      {/* Material — list is DB-driven from the `materials` table, so admins
+          adding new materials see them here with no code change. */}
       <FilterSection title={t('material')} defaultOpen={false}>
-        <div className="space-y-1.5">
-          {materials.map((mat) => (
-            <button
-              key={mat}
-              onClick={() => updateFilter({ material: filters.material === mat ? null : mat })}
-              className={cn(
-                'flex items-center w-full px-2 py-1.5 text-sm rounded transition-colors text-left',
-                filters.material === mat
-                  ? 'bg-gold/10 text-gold font-medium'
-                  : 'text-charcoal hover:bg-cream'
-              )}
-            >
-              {mat}
-            </button>
-          ))}
-        </div>
+        {materials.length === 0 ? (
+          <p className="text-xs text-gray-400 px-2 py-1">Aucune matière disponible</p>
+        ) : (
+          <div className="space-y-1.5 max-h-48 overflow-y-auto">
+            {materials.map((mat) => (
+              <button
+                key={mat.id}
+                onClick={() =>
+                  updateFilter({
+                    materialId: filters.materialId === mat.id ? null : mat.id,
+                  })
+                }
+                className={cn(
+                  'flex items-center w-full px-2 py-1.5 text-sm rounded transition-colors text-left',
+                  filters.materialId === mat.id
+                    ? 'bg-gold/10 text-gold font-medium'
+                    : 'text-charcoal hover:bg-cream',
+                )}
+              >
+                {mat.name}
+              </button>
+            ))}
+          </div>
+        )}
       </FilterSection>
     </div>
   );

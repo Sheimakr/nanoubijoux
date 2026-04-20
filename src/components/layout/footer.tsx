@@ -1,14 +1,25 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
-import { Instagram, Facebook, MessageCircle, Send } from 'lucide-react';
-import { SOCIAL_LINKS, CONTACT_EMAIL, CONTACT_PHONE } from '@/lib/constants';
+// TikTok (MessageCircle) + Telegram (Send) icons removed from the
+// "Follow Us" block per owner request — only Instagram + Facebook remain.
+import { Instagram, Facebook } from 'lucide-react';
+import { useSettingsStore } from '@/stores/settings-store';
+// NOTE: CONTACT_EMAIL removed — email now comes from the settings store (DB).
 
 export function Footer() {
   const t = useTranslations('footer');
   const tNav = useTranslations('nav');
   const year = new Date().getFullYear();
+
+  const { store_name, phone, email, instagram, facebook, fetchSettings, loaded } =
+    useSettingsStore();
+
+  useEffect(() => {
+    if (!loaded) fetchSettings();
+  }, [loaded, fetchSettings]);
 
   return (
     <footer className="bg-white border-t border-border">
@@ -17,7 +28,7 @@ export function Footer() {
           {/* Brand */}
           <div>
             <span className="font-heading text-xl font-bold text-dark block mb-3">
-              Nano Bijoux
+              {store_name}
             </span>
             <p className="text-text-body text-sm leading-relaxed">
               {t('description')}
@@ -31,10 +42,10 @@ export function Footer() {
             </h3>
             <ul className="space-y-2">
               {[
+                // FAQ link removed per owner request.
                 { href: '/boutique', label: tNav('shop') },
                 { href: '/a-propos', label: tNav('about') },
                 { href: '/livraison', label: tNav('shipping') },
-                { href: '/faq', label: tNav('faq') },
                 { href: '/blog', label: tNav('blog') },
               ].map((link) => (
                 <li key={link.href}>
@@ -55,16 +66,28 @@ export function Footer() {
               {t('contactUs')}
             </h3>
             <ul className="space-y-2 text-sm text-text-body">
-              <li>
-                <a href={`tel:${CONTACT_PHONE.replace(/\s/g, '')}`} className="hover:text-gold transition-colors">
-                  {CONTACT_PHONE}
-                </a>
-              </li>
-              <li>
-                <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-gold transition-colors">
-                  {CONTACT_EMAIL}
-                </a>
-              </li>
+              {/* Phone — hide the whole line if the DB field is empty */}
+              {phone && (
+                <li>
+                  <a
+                    href={`tel:${phone.replace(/\s/g, '')}`}
+                    className="hover:text-gold transition-colors"
+                  >
+                    {phone}
+                  </a>
+                </li>
+              )}
+              {/* Email — hide the whole line if the DB field is empty */}
+              {email && (
+                <li>
+                  <a
+                    href={`mailto:${email}`}
+                    className="hover:text-gold transition-colors"
+                  >
+                    {email}
+                  </a>
+                </li>
+              )}
               <li>Algérie - 58 Wilayas</li>
             </ul>
           </div>
@@ -76,11 +99,13 @@ export function Footer() {
             </h3>
             <div className="flex items-center gap-3">
               {[
-                { href: SOCIAL_LINKS.instagram, icon: Instagram, label: 'Instagram' },
-                { href: SOCIAL_LINKS.facebook, icon: Facebook, label: 'Facebook' },
-                { href: SOCIAL_LINKS.tiktok, icon: MessageCircle, label: 'TikTok' },
-                { href: SOCIAL_LINKS.telegram, icon: Send, label: 'Telegram' },
-              ].map(({ href, icon: Icon, label }) => (
+                { href: instagram, icon: Instagram, label: 'Instagram' },
+                { href: facebook,  icon: Facebook,  label: 'Facebook' },
+              ]
+                // Drop entries whose DB-backed URL is empty so we don't
+                // render dead anchors when admin hasn't set them yet.
+                .filter(({ href }) => href && href.length > 0)
+                .map(({ href, icon: Icon, label }) => (
                 <a
                   key={label}
                   href={href}
@@ -98,7 +123,7 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-10 pt-6 border-t border-border text-center text-sm text-text-body">
-          <p>Nano Bijoux DZ.© {year}. {t('rights', { year })}</p>
+          <p>{store_name} DZ.© {year}. {t('rights', { year })}</p>
         </div>
       </div>
     </footer>

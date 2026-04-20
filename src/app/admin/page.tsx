@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Package, ShoppingCart, Users, DollarSign, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Package, ShoppingCart, DollarSign, AlertTriangle, ArrowRight } from 'lucide-react';
 import { getDashboardStats } from '@/lib/supabase/admin-queries';
 import { formatPrice } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { useRealtimeTable } from '@/hooks/use-realtime-table';
+import { toast } from 'sonner';
 
 interface Stats {
   totalProducts: number;
@@ -36,12 +38,42 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Extracted so both initial load and realtime handlers can call it.
+  // Returns the promise so the initial-load effect can await it for the
+  // loading spinner; realtime handlers ignore the returned promise.
+  const refreshStats = async () => {
+    try {
+      const fresh = await getDashboardStats();
+      setStats(fresh);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
-    getDashboardStats()
-      .then(setStats)
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    // Finally() ensures the skeleton disappears even if the fetch errors.
+    refreshStats().finally(() => setLoading(false));
   }, []);
+
+  // Realtime: refresh stats + recent orders table when a new order lands.
+  // Scoped to INSERT to avoid churning on every status update.
+  useRealtimeTable<{ id: number }>({
+    table: 'orders',
+    event: 'INSERT',
+    onChange: (payload) => {
+      // eventType guard narrows payload.new from (T | {}) to T.
+      if (payload.eventType === 'INSERT') {
+        toast.success(`Nouvelle commande #${payload.new.id}`);
+      }
+      refreshStats();
+    },
+  });
+
+  // Realtime: also refresh the "Produits" stat card when inventory changes.
+  useRealtimeTable({
+    table: 'products',
+    onChange: () => refreshStats(),
+  });
 
   if (loading) {
     return (
@@ -60,11 +92,13 @@ export default function AdminDashboard() {
 
   if (!stats) return null;
 
+  // Clients stat card removed alongside the /admin/clients page.
+  // stats.totalCustomers is still returned by getDashboardStats but
+  // simply isn't surfaced in the UI anymore.
   const statCards = [
     { label: 'Produits', value: stats.totalProducts, icon: Package, color: 'text-blue-600 bg-blue-50', href: '/admin/produits' },
     { label: 'Commandes', value: stats.totalOrders, icon: ShoppingCart, color: 'text-green-600 bg-green-50', href: '/admin/commandes' },
     { label: 'Revenus', value: formatPrice(stats.totalRevenue), icon: DollarSign, color: 'text-gold bg-gold/10', href: '/admin/commandes' },
-    { label: 'Clients', value: stats.totalCustomers, icon: Users, color: 'text-purple-600 bg-purple-50', href: '/admin/clients' },
   ];
 
   return (

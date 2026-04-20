@@ -2,16 +2,26 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { Calendar, ArrowRight, Search } from 'lucide-react';
 import { getPublishedBlogPosts } from '@/lib/supabase/queries';
+import { getLocalizedField } from '@/lib/utils';
 import Image from 'next/image';
 
+/**
+ * Row shape from the `blog_posts` table. We index signatures allow
+ * getLocalizedField() to pick title_fr | title_ar | title_en and
+ * content_fr | content_ar | content_en by locale at render time.
+ */
 interface BlogPost {
   id: string;
   title_fr: string;
+  title_ar?: string;
+  title_en?: string;
   content_fr: string;
+  content_ar?: string;
+  content_en?: string;
   slug: string;
   featured_image: string | null;
   published_at: string;
@@ -19,6 +29,7 @@ interface BlogPost {
 
 export default function BlogPage() {
   const t = useTranslations('nav');
+  const locale = useLocale();
   const [searchQuery, setSearchQuery] = useState('');
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,10 +41,14 @@ export default function BlogPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filteredPosts = posts.filter((post) =>
-    post.title_fr.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.content_fr?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Search filters against whichever locale the user is viewing — so
+  // typing in Arabic searches title_ar/content_ar, etc.
+  const filteredPosts = posts.filter((post) => {
+    const title = getLocalizedField(post, 'title', locale).toLowerCase();
+    const content = getLocalizedField(post, 'content', locale).toLowerCase();
+    const q = searchQuery.toLowerCase();
+    return title.includes(q) || content.includes(q);
+  });
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('fr-FR', {
@@ -102,7 +117,7 @@ export default function BlogPage() {
                     {post.featured_image ? (
                       <Image
                         src={post.featured_image}
-                        alt={post.title_fr}
+                        alt={getLocalizedField(post, 'title', locale)}
                         fill
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
                         sizes="(max-width: 768px) 100vw, 33vw"
@@ -118,9 +133,11 @@ export default function BlogPage() {
                     {formatDate(post.published_at)}
                   </div>
                   <h2 className="font-heading text-lg font-semibold text-dark group-hover:text-gold transition-colors mb-2">
-                    {post.title_fr}
+                    {getLocalizedField(post, 'title', locale)}
                   </h2>
-                  <p className="text-sm text-gray-500 mb-3">{getExcerpt(post.content_fr)}</p>
+                  <p className="text-sm text-gray-500 mb-3">
+                    {getExcerpt(getLocalizedField(post, 'content', locale))}
+                  </p>
                   <span className="text-sm text-gold font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
                     Lire la suite <ArrowRight size={14} />
                   </span>

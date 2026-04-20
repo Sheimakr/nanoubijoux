@@ -1,5 +1,5 @@
 import { createClient } from './client';
-import type { Product, Category, Brand, Order, Coupon, BlogPost } from '@/types';
+import type { Product, Category, Brand, Material, Order, Coupon, BlogPost } from '@/types';
 
 const supabase = createClient();
 
@@ -252,6 +252,45 @@ export async function updateBrand(id: string | number, updates: Partial<Brand>) 
 
 export async function deleteBrand(id: string | number) {
   const { error } = await supabase.from('brands').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ============================================
+// Materials (Matières) — Admin CRUD
+// Mirrors the brand CRUD pattern: simple name + slug.
+// ============================================
+export async function getAllMaterials(): Promise<Material[]> {
+  const { data, error } = await supabase
+    .from('materials')
+    .select('*')
+    .order('name', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as Material[];
+}
+
+export async function createMaterial(material: Partial<Material>) {
+  const { data, error } = await supabase
+    .from('materials')
+    .insert(material)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateMaterial(id: string | number, updates: Partial<Material>) {
+  const { data, error } = await supabase
+    .from('materials')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteMaterial(id: string | number) {
+  const { error } = await supabase.from('materials').delete().eq('id', id);
   if (error) throw error;
 }
 

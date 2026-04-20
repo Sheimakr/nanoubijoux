@@ -4,17 +4,18 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Upload, X } from 'lucide-react';
 import Link from 'next/link';
-import { getCategories, getBrands } from '@/lib/supabase/queries';
+import { getCategories, getBrands, getMaterials } from '@/lib/supabase/queries';
 import { createProduct, addProductImage, uploadProductImage } from '@/lib/supabase/admin-queries';
 import { Button } from '@/components/ui/button';
 import { slugify } from '@/lib/utils';
 import { toast } from 'sonner';
-import type { Category, Brand } from '@/types';
+import type { Category, Brand, Material } from '@/types';
 
 export default function NewProductPage() {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({
@@ -25,7 +26,7 @@ export default function NewProductPage() {
     compare_at_price: '',
     category_id: '',
     brand_id: '',
-    material: '',
+    material_id: '', // stores string form of the materials.id FK
     stock_quantity: '50',
     sku: '',
     is_featured: false,
@@ -37,6 +38,7 @@ export default function NewProductPage() {
   useEffect(() => {
     getCategories().then(setCategories).catch(console.error);
     getBrands().then(setBrands).catch(console.error);
+    getMaterials().then(setMaterials).catch(console.error);
   }, []);
 
   const handleImageUpload = async (file: File) => {
@@ -68,7 +70,7 @@ export default function NewProductPage() {
         compare_at_price: form.compare_at_price ? Number(form.compare_at_price) : null,
         category_id: form.category_id ? Number(form.category_id) : null,
         brand_id: form.brand_id ? Number(form.brand_id) : null,
-        material: form.material || null,
+        material_id: form.material_id ? Number(form.material_id) : null,
         stock_quantity: Number(form.stock_quantity),
         sku: form.sku || `P${Date.now().toString(36).toUpperCase()}`,
         is_featured: form.is_featured,
@@ -158,15 +160,24 @@ export default function NewProductPage() {
               </select>
             </div>
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">Matériau</label>
-              <select value={form.material} onChange={(e) => setForm({ ...form, material: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
-                <option value="">— Aucun —</option>
-                <option value="Acier inoxydable">Acier inoxydable</option>
-                <option value="Plaqué or">Plaqué or</option>
-                <option value="Argent 925">Argent 925</option>
-                <option value="Cuivre">Cuivre</option>
-                <option value="Perles">Perles</option>
+              <label className="text-xs text-gray-500 mb-1 block">Matière</label>
+              <select
+                value={form.material_id}
+                onChange={(e) => setForm({ ...form, material_id: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg text-sm"
+              >
+                <option value="">— Aucune —</option>
+                {materials.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
               </select>
+              {materials.length === 0 && (
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Aucune matière — ajoutez-en via l&apos;onglet Matières.
+                </p>
+              )}
             </div>
           </div>
         </div>

@@ -6,12 +6,15 @@ import { useTranslations, useLocale } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCartStore } from '@/stores/cart-store';
+import { useAuthStore } from '@/stores/auth-store';
+import { useHydrated } from '@/hooks/use-hydrated';
 import { formatPrice } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { getWilayas, createOrder, validateCoupon, incrementCouponUsage } from '@/lib/supabase/queries';
 import { Check, Truck, Package, ChevronRight, Tag, Home, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import Image from 'next/image';
+import { getLocalizedField } from '@/lib/utils';
 
 const steps = ['step1', 'step2', 'step4'] as const; // Info, Shipping, Confirmation (COD only)
 
@@ -32,6 +35,9 @@ export default function CheckoutPage() {
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const { items, getSubtotal, getDiscount, clearCart } = useCartStore();
+  // Pull the logged-in user from the auth store so we can pin orders
+  // to the correct account. If null → guest checkout (user_id stays null).
+  const { user: authUser } = useAuthStore();
   const [currentStep, setCurrentStep] = useState(0);
   const [wilayas, setWilayas] = useState<WilayaData[]>([]);
   const [communes, setCommunes] = useState<string[]>([]);
@@ -81,10 +87,21 @@ export default function CheckoutPage() {
 
   const hasDeskDelivery = selectedWilaya && (selectedWilaya.desk_fee ?? 0) > 0;
 
-  const subtotal = getSubtotal();
-  const discount = getDiscount() + couponDiscount;
+  // Cart values derive from Zustand + localStorage which isn't readable on
+  // the server. We must render the SAME thing on SSR and initial client
+  // paint (otherwise React throws the hydration mismatch error we just
+  // saw). `hydrated` flips true only after the first effect runs on the
+  // client, at which point the real cart values replace the SSR-safe zeros.
+  const hydrated = useHydrated();
+  const rawSubtotal = getSubtotal();
+  const rawDiscount = getDiscount() + couponDiscount;
   const shippingFee = getDeliveryFee();
-  const total = Math.max(0, subtotal - discount + shippingFee);
+
+  const subtotal = hydrated ? rawSubtotal : 0;
+  const discount = hydrated ? rawDiscount : 0;
+  const total    = hydrated
+    ? Math.max(0, rawSubtotal - rawDiscount + shippingFee)
+    : 0;
 
   const applyCoupon = async () => {
     if (!couponCode.trim()) return;
@@ -152,6 +169,10 @@ export default function CheckoutPage() {
         discount,
         shipping_fee: shippingFee,
         total,
+        // Explicit user_id from the auth store — more reliable than
+        // supabase.auth.getUser() which was returning null even for
+        // logged-in users (session-cookie sync issue).
+        user_id: authUser?.id ?? null,
         items: items.map((item) => ({
           product_id: item.product.id,
           variant_id: item.variant?.id || null,
@@ -170,9 +191,61 @@ export default function CheckoutPage() {
       clearCart();
       toast.success('Commande confirmée !');
       setCurrentStep(2); // Confirmation step
-    } catch (err: any) {
-      console.error('Order failed:', err);
-      toast.error(err?.message || 'Erreur lors de la commande. Réessayez.');
+    } catch (err: unknown) {
+      // Maximum-diagnostic dump: previous attempts showed empty "{}"
+      // because Error-like objects have non-enumerable message/stack.
+      // Use getOwnPropertyNames + JSON.stringify to force those out.
+      const e = err as {
+        message?: string;
+        code?: string;
+        details?: string;
+        hint?: string;
+        name?: string;
+        stack?: string;
+      };
+      const ownProps =
+        err && typeof err === 'object'
+          ? Object.getOwnPropertyNames(err as object)
+          : [];
+      const serialized = JSON.stringify(err, ownProps);
+
+      console.error('[order] typeof:',       typeof err);
+      console.error('[order] constructor:',  (err as object)?.constructor?.name);
+      console.error('[order] own props:',    ownProps);
+      console.error('[order] serialized:',   serialized);
+      console.error('[order] message:',      e?.message);
+      console.error('[order] code:',         e?.code);
+      console.error('[order] details:',      e?.details);
+      console.error('[order] hint:',         e?.hint);
+      console.error('[order] stack:',        e?.stack);
+      console.error('[order] raw ref:',      err);
+
+      // Special case: FK violation on order_items.product_id means the
+      // cart contains product IDs that no longer exist in the products
+      // table (usually stale localStorage after a DB reset). Offer the
+      // user a one-click cart reset instead of a cryptic error.
+      if (
+        e?.code === '23503' &&
+        e?.message?.includes('order_items_product_id_fkey')
+      ) {
+        toast.error(
+          'Votre panier contient des produits qui n\'existent plus. Vidage automatique…',
+          { duration: 5000 },
+        );
+        clearCart();
+        // Bump them back to step 0 so they restart fresh.
+        setCurrentStep(0);
+        return;
+      }
+
+      // Generic path: prefer message → details → code → fallback.
+      const userMsg =
+        e?.message ||
+        e?.details ||
+        e?.hint ||
+        e?.code ||
+        (serialized && serialized !== '{}' ? serialized : 'Erreur lors de la commande. Réessayez.');
+      toast.error(userMsg);
     } finally {
       setSubmitting(false);
     }
@@ -391,25 +464,33 @@ export default function CheckoutPage() {
           <div>
             <div className="bg-white rounded-2xl p-6 shadow-sm sticky top-24">
               <h3 className="font-heading text-lg font-semibold text-dark mb-4">Récapitulatif</h3>
+              {/* Same hydration guard as subtotal/total — render empty list
+                  on server + first client paint, then the real items. */}
               <div className="space-y-3 mb-4">
-                {items.map((item) => (
-                  <div key={item.product.id} className="flex gap-3">
-                    <div className="w-14 h-14 rounded-lg bg-cream overflow-hidden flex-shrink-0 relative">
-                      <Image
-                        src={item.product.images?.[0]?.url || '/images/placeholder.jpg'}
-                        alt={item.product.name_fr}
-                        fill
-                        className="object-cover"
-                        sizes="56px"
-                      />
+                {hydrated && items.map((item) => {
+                  // Display in the user's locale; fall back to FR via helper.
+                  const productName = getLocalizedField(item.product, 'name', locale) || 'Produit';
+                  return (
+                    <div key={item.product.id} className="flex gap-3">
+                      <div className="w-14 h-14 rounded-lg bg-cream overflow-hidden flex-shrink-0 relative">
+                        <Image
+                          src={item.product.images?.[0]?.url || '/images/placeholder.jpg'}
+                          alt={productName}
+                          fill
+                          className="object-cover"
+                          sizes="56px"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-dark truncate">{productName}</p>
+                        <p className="text-xs text-gray-500">x{item.quantity}</p>
+                      </div>
+                      <span className="text-sm font-medium">
+                        {formatPrice((item.variant?.price_override ?? item.product.price) * item.quantity)}
+                      </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-dark truncate">{item.product.name_fr}</p>
-                      <p className="text-xs text-gray-500">x{item.quantity}</p>
-                    </div>
-                    <span className="text-sm font-medium">{formatPrice((item.variant?.price_override ?? item.product.price) * item.quantity)}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               {/* Coupon */}
               <div className="border-t border-gray-100 pt-3 mb-3">

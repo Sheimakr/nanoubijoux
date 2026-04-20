@@ -8,6 +8,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { formatPrice } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useRealtimeTable } from '@/hooks/use-realtime-table';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -59,6 +60,20 @@ export default function AdminOrdersPage() {
   };
 
   useEffect(() => { fetchOrders(); }, [page, statusFilter, search]);
+
+  // Realtime: new / updated / deleted orders appear without a refresh.
+  // Toast only on INSERT so manual status edits don't double-notify.
+  useRealtimeTable<{ id: number }>({
+    table: 'orders',
+    onChange: (payload) => {
+      if (payload.eventType === 'INSERT' && payload.new?.id) {
+        toast.success(`Nouvelle commande #${payload.new.id}`);
+      }
+      // Any change → re-fetch the current paginated/filtered view.
+      // fetchOrders closes over the latest state, so filters are honored.
+      fetchOrders();
+    },
+  });
 
   const handleStatusChange = async (orderId: number, newStatus: string) => {
     try {
@@ -130,7 +145,10 @@ export default function AdminOrdersPage() {
                   <tr key={order.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium">#{order.id}</td>
                     <td className="px-4 py-3 text-gray-500">
-                      {order.shipping_address?.full_name || '—'}
+                      {/* orders has a flat `full_name` column — the old
+                          reference to `shipping_address?.full_name` was
+                          dead (no such JSONB column), silently rendering "—". */}
+                      {order.full_name || '—'}
                     </td>
                     <td className="px-4 py-3 text-gray-500">
                       {new Date(order.created_at).toLocaleDateString('fr-FR')}

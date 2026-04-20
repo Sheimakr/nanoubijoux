@@ -22,6 +22,12 @@ export interface Brand {
   sort_order: number;
 }
 
+export interface Material {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 export interface Product {
   id: string;
   name_fr: string;

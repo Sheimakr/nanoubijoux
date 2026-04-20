@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getLocale } from 'next-intl/server';
 import { TrackingPixels } from '@/components/shared/tracking-pixels';
 import './globals.css';
 
@@ -36,13 +37,24 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Read the current locale from next-intl so the <html> tag advertises the
+  // right language (screen readers, SEO) and direction (Arabic → RTL).
+  // getLocale() resolves via the middleware that detects /fr|/ar|/en.
+  const locale = await getLocale();
+  const isRtl = locale === 'ar';
+
   return (
-    <html className="h-full antialiased" suppressHydrationWarning>
+    <html
+      lang={locale}
+      dir={isRtl ? 'rtl' : 'ltr'}
+      className="h-full antialiased"
+      suppressHydrationWarning
+    >
       <head>
         <TrackingPixels />
       </head>

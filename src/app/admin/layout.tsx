@@ -6,9 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Package,
-  FolderTree,
   ShoppingCart,
-  Users,
   Ticket,
   FileText,
   Menu,
@@ -34,14 +32,18 @@ interface AdminUser {
 const sidebarLinks = [
   { href: '/admin', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/admin/commandes', label: 'Commandes', icon: ShoppingCart },
+  // Categories / Brands / Materials are now sub-tabs inside "Produits"
+  // (the catalog hub) — intentionally not in the sidebar anymore.
+  // Their standalone URLs still work if you hit them directly.
   { href: '/admin/produits', label: 'Produits', icon: Package },
-  { href: '/admin/categories', label: 'Catégories', icon: FolderTree },
   { href: '/admin/delivery', label: 'Livraison', icon: Truck },
   { href: '/admin/pixels', label: 'Pixels', icon: Code },
-  { href: '/admin/clients', label: 'Clients', icon: Users },
-  { href: '/admin/users', label: 'Utilisateurs', icon: Shield, permission: 'users:manage' },
+  // Clients section removed per owner request. Page + API route deleted.
+  { href: '/admin/admins', label: 'Admins', icon: Shield, permission: 'users:manage' },
   { href: '/admin/settings', label: 'Paramètres', icon: Settings, permission: 'settings:manage' },
-  { href: '/admin/coupons', label: 'Coupons', icon: Ticket },
+  // Coupons is finance-sensitive — only super admins (role==='admin')
+  // pass the canSee() check. Agents won't see it in the sidebar at all.
+  { href: '/admin/coupons', label: 'Coupons', icon: Ticket, permission: 'coupons:manage' },
   { href: '/admin/blog', label: 'Blog', icon: FileText },
 ];
 

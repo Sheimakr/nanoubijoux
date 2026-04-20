@@ -1,5 +1,5 @@
 import { createClient } from './client';
-import type { Product, Category, Brand } from '@/types';
+import type { Product, Category, Brand, Material } from '@/types';
 
 const supabase = createClient();
 
@@ -41,6 +41,19 @@ export async function getBrands() {
 }
 
 // ============================================
+// Materials (Matières) — public read
+// ============================================
+export async function getMaterials() {
+  const { data, error } = await supabase
+    .from('materials')
+    .select('*')
+    .order('name', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as Material[];
+}
+
+// ============================================
 // Products
 // ============================================
 export async function getProducts(options?: {
@@ -53,7 +66,8 @@ export async function getProducts(options?: {
   onSale?: boolean;
   priceMin?: number;
   priceMax?: number;
-  material?: string;
+  material?: string;        // legacy — matches products.material (text)
+  materialId?: number;      // current  — matches products.material_id (FK)
   limit?: number;
   offset?: number;
   sort?: string;
@@ -96,8 +110,16 @@ export async function getProducts(options?: {
     query = query.lte('price', options.priceMax);
   }
 
+  // Legacy string match (backward compat with products that only have
+  // the old `material` text column populated). Safe to remove once all
+  // products are migrated to material_id.
   if (options?.material) {
     query = query.eq('material', options.material);
+  }
+
+  // New FK-based filter — ties into the materials table.
+  if (options?.materialId) {
+    query = query.eq('material_id', options.materialId);
   }
 
   if (options?.search) {
@@ -227,6 +249,10 @@ export async function createOrder(order: {
   discount: number;
   shipping_fee: number;
   total: number;
+  // Caller should pass this explicitly from their auth store to avoid
+  // the client-side Supabase session cookie being out of sync.
+  // Optional fallback to supabase.auth.getUser() below.
+  user_id?: string | null;
   items: {
     product_id: string;
     variant_id?: string | null;
@@ -238,11 +264,20 @@ export async function createOrder(order: {
     product_sku?: string;
   }[];
 }) {
-  const { items, ...orderData } = order;
+  const { items, user_id: callerUserId, ...orderData } = order;
 
-  // Attach user_id if logged in
-  const { data: { user } } = await supabase.auth.getUser();
-  const insertData = user ? { ...orderData, user_id: user.id } : orderData;
+  // Prefer the caller-supplied user_id (reliable — comes from whatever
+  // auth store the UI trusts). Fall back to the session lookup only if
+  // the caller didn't pass one. Guest checkouts → user_id stays null.
+  let effectiveUserId: string | undefined = callerUserId ?? undefined;
+  if (!effectiveUserId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    effectiveUserId = user?.id;
+  }
+
+  const insertData = effectiveUserId
+    ? { ...orderData, user_id: effectiveUserId }
+    : orderData;
 
   // Insert order
   const { data: newOrder, error: orderError } = await supabase
