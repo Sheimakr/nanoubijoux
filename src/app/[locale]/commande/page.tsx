@@ -72,14 +72,20 @@ export default function CheckoutPage() {
   }, [selectedWilaya]);
 
   // Calculate delivery fee based on type
-  const getDeliveryFee = () => {
+  // Pure function: takes the subtotal as an argument instead of reading
+  // a closed-over `subtotal` const. Avoids the TDZ trap — the previous
+  // version threw `Cannot access 'subtotal' before initialization` once
+  // a wilaya was selected, because subtotal is declared BELOW the first
+  // call to this function during render.
+  const getDeliveryFee = (sub: number) => {
     if (!selectedWilaya) return 0;
     const homeFee = selectedWilaya.home_fee ?? selectedWilaya.shipping_fee ?? 0;
     const deskFee = selectedWilaya.desk_fee ?? 0;
     const fee = deliveryType === 'desk' && deskFee > 0 ? deskFee : homeFee;
 
-    // Check free delivery threshold
-    if (selectedWilaya.free_from && selectedWilaya.free_from > 0 && subtotal >= selectedWilaya.free_from) {
+    // Free delivery threshold — applies only when cart is above the
+    // wilaya-specific `free_from` value.
+    if (selectedWilaya.free_from && selectedWilaya.free_from > 0 && sub >= selectedWilaya.free_from) {
       return 0;
     }
     return fee;
@@ -89,13 +95,13 @@ export default function CheckoutPage() {
 
   // Cart values derive from Zustand + localStorage which isn't readable on
   // the server. We must render the SAME thing on SSR and initial client
-  // paint (otherwise React throws the hydration mismatch error we just
-  // saw). `hydrated` flips true only after the first effect runs on the
-  // client, at which point the real cart values replace the SSR-safe zeros.
+  // paint (otherwise React throws a hydration mismatch error). `hydrated`
+  // flips true only after the first effect runs on the client, at which
+  // point the real cart values replace the SSR-safe zeros.
   const hydrated = useHydrated();
   const rawSubtotal = getSubtotal();
   const rawDiscount = getDiscount() + couponDiscount;
-  const shippingFee = getDeliveryFee();
+  const shippingFee = getDeliveryFee(rawSubtotal);
 
   const subtotal = hydrated ? rawSubtotal : 0;
   const discount = hydrated ? rawDiscount : 0;
