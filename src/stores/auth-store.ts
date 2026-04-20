@@ -66,12 +66,41 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   loadUser: async () => {
     try {
       const user = await getUser();
-      if (user) {
-        const profile = await getUserProfile();
-        set({ user, profile });
-      } else {
+      if (!user) {
         set({ user: null, profile: null });
+        return;
       }
+
+      // Ghost-session guard: Supabase's getUser() only validates the JWT
+      // signature — if the user row in auth.users was deleted but the
+      // session cookie is still signed correctly, we get a user object
+      // whose id no longer exists in the DB. That produces silent bugs
+      // everywhere (Commandes = 0, orphaned orders, FK violations on
+      // new inserts). Verify against auth.users via a service-role
+      // endpoint and force signOut if the id is orphaned.
+      try {
+        const res = await fetch(`/api/auth/verify?id=${user.id}`);
+        const { exists } = (await res.json()) as { exists: boolean };
+
+        if (!exists) {
+          console.warn(
+            `[auth] Ghost session detected — user.id ${user.id} no longer in auth.users. Signing out.`,
+          );
+          await signOut().catch(() => {
+            // Best-effort — if signOut throws we still clear local state.
+          });
+          set({ user: null, profile: null });
+          return;
+        }
+      } catch (err) {
+        // Transient network / verify-endpoint failure → don't force
+        // logout (would be annoying on flaky connections). Just trust
+        // the JWT and carry on.
+        console.warn('[auth] verify endpoint unreachable, skipping ghost check', err);
+      }
+
+      const profile = await getUserProfile();
+      set({ user, profile });
     } catch {
       set({ user: null, profile: null });
     }

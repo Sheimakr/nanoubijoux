@@ -124,20 +124,6 @@ export default function AccountPage() {
           </div>
         </div>
 
-        {/* TEMPORARY DEBUG CHIP — remove once Commandes count is verified.
-            Prints the logged-in auth user.id so we can compare it to
-            orders.user_id in the DB. If they don't match, /mon-compte is
-            querying the wrong id. If they match but count is 0, the
-            query is bugged OR no orders have that user_id. */}
-        {process.env.NODE_ENV !== 'production' && user && (
-          <div className="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 p-3 text-xs font-mono break-all">
-            <span className="font-bold text-yellow-800">debug user.id:</span>{' '}
-            <span className="text-yellow-700">{user.id}</span>
-            <span className="ml-3 font-bold text-yellow-800">orders.count:</span>{' '}
-            <span className="text-yellow-700">{orderCount}</span>
-          </div>
-        )}
-
         {/* Quick stats — now live. wishlistCount gated by `hydrated`
             so SSR and client render the same value (no hydration warning). */}
         <div className="grid grid-cols-3 gap-4 mb-6">
