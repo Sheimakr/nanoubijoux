@@ -218,8 +218,23 @@ export async function verifyJWT(token: string, secret: string): Promise<JWTPaylo
 
 // ─── Session Management ───────────────────────────────────────────────────────
 
+/**
+ * Read ADMIN_SECRET or throw — no hardcoded fallback. Throwing here bubbles
+ * up into a 500 at the caller's API route, making misconfiguration loud
+ * and immediate instead of silently accepting a known-public default.
+ */
+function requireAdminSecret(): string {
+    const secret = process.env.ADMIN_SECRET;
+    if (!secret) {
+        throw new Error(
+            'ADMIN_SECRET env var is required. Set it in .env.local (generate with: openssl rand -hex 32)',
+        );
+    }
+    return secret;
+}
+
 export async function createSession(user: AppUser): Promise<string> {
-    const secret = process.env.ADMIN_SECRET || 'nanobijoux_secret_key_2026';
+    const secret = requireAdminSecret();
 
     const effectivePermissions: Permission[] =
         user.role === 'admin' ? ALL_PERMISSIONS : user.permissions;
@@ -237,7 +252,7 @@ export async function createSession(user: AppUser): Promise<string> {
 }
 
 export async function validateSession(token: string): Promise<JWTPayload | null> {
-    const secret = process.env.ADMIN_SECRET || 'nanobijoux_secret_key_2026';
+    const secret = requireAdminSecret();
     return verifyJWT(token, secret);
 }
 
@@ -397,12 +412,35 @@ export async function countUsers(): Promise<number> {
     return count ?? 0;
 }
 
+/**
+ * First-boot safety: when the admin_users table is empty, create a
+ * super-admin from env-provided credentials. No hardcoded defaults —
+ * if env vars are missing we REFUSE to bootstrap so a brand-new deploy
+ * can never accidentally start with "admin/admin123".
+ */
 export async function bootstrapAdminIfNeeded(): Promise<AppUser | null> {
     const total = await countUsers();
     if (total > 0) return null;
 
-    const username = process.env.ADMIN_USER || 'admin';
-    const password = process.env.ADMIN_PASS || 'admin123';
+    const username = process.env.ADMIN_USER;
+    const password = process.env.ADMIN_PASS;
+
+    if (!username || !password) {
+        console.error(
+            '[bootstrap] admin_users is empty AND ADMIN_USER / ADMIN_PASS not set. ' +
+                'Set them in .env.local or create an admin row via scripts/reset-user.mjs.',
+        );
+        return null;
+    }
+
+    // Extra guard — never accept the historical insecure defaults, even
+    // if someone copied them out of old documentation.
+    if (password === 'admin123' || password === 'password' || password.length < 8) {
+        throw new Error(
+            'Refusing to bootstrap admin with a weak or default password. ' +
+                'ADMIN_PASS must be at least 8 characters and NOT "admin123".',
+        );
+    }
 
     return createUser({
         username,

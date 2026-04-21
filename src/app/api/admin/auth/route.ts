@@ -59,14 +59,29 @@ export async function POST(req: Request) {
         }
 
         if (!dbAvailable) {
-            const envUser = process.env.ADMIN_USER || 'admin';
-            const envPass = process.env.ADMIN_PASS || 'admin123';
+            // Fallback bootstrap login when the admin_users table is unreachable.
+            // REQUIRES env vars — no hardcoded defaults. If ADMIN_USER / ADMIN_PASS
+            // / ADMIN_SECRET are missing, fail loudly so admins notice in dev and
+            // deployments don't silently launch with "admin/admin123".
+            const envUser   = process.env.ADMIN_USER;
+            const envPass   = process.env.ADMIN_PASS;
+            const envSecret = process.env.ADMIN_SECRET;
+
+            if (!envUser || !envPass || !envSecret) {
+                console.error(
+                    '[admin/auth] Missing required env vars: ADMIN_USER / ADMIN_PASS / ADMIN_SECRET',
+                );
+                return NextResponse.json(
+                    { error: 'Server misconfigured — admin credentials env vars not set' },
+                    { status: 500 },
+                );
+            }
 
             if (username !== envUser || password !== envPass) {
                 return NextResponse.json({ error: 'Identifiants incorrects' }, { status: 401 });
             }
 
-            const secret = process.env.ADMIN_SECRET || 'nanobijoux_secret_key_2026';
+            const secret = envSecret;
             token = await createJWT(
                 {
                     userId: 'env-admin',

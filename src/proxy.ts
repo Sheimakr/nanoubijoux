@@ -131,7 +131,15 @@ async function handleAdminAuth(request: NextRequest) {
     return NextResponse.redirect(new URL('/admin/login', request.url));
   }
 
-  const secret = process.env.ADMIN_SECRET || 'nanobijoux_secret_key_2026';
+  // No hardcoded secret fallback — if ADMIN_SECRET is missing, force a
+  // redirect to login + drop the cookie. Production must set ADMIN_SECRET.
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret) {
+    console.error('[proxy/admin] ADMIN_SECRET env var not set — redirecting');
+    const response = NextResponse.redirect(new URL('/admin/login', request.url));
+    response.cookies.delete('admin_session');
+    return response;
+  }
   const payload = await verifyJWTEdge(session, secret);
 
   if (!payload) {
@@ -181,7 +189,15 @@ async function handleAdminApiAuth(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const secret = process.env.ADMIN_SECRET || 'nanobijoux_secret_key_2026';
+  // No fallback — if misconfigured, 500 explicitly so it's obvious.
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret) {
+    console.error('[proxy/api] ADMIN_SECRET env var not set');
+    return NextResponse.json(
+      { error: 'Server misconfigured' },
+      { status: 500 },
+    );
+  }
   const payload = await verifyJWTEdge(session, secret);
 
   if (!payload) {
